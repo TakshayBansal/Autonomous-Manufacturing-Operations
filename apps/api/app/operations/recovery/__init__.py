@@ -1,0 +1,1 @@
+"""Deterministic operational recovery domain."""

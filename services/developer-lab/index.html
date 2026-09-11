@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>GenuineGigs Developer Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/extras.css">
+</head>
+<body>
+<main class="lab-shell">
+  <aside class="lab-nav">
+    <div class="brand"><b>GG</b><div><strong>Developer Lab</strong><small>Northstar isolated test bench</small></div></div>
+    <nav id="navigation"></nav>
+    <footer><span id="liveDot"></span><div><strong id="connectionLabel">Connecting</strong><small>Local developer boundary</small></div></footer>
+  </aside>
+  <section class="lab-main">
+    <header class="run-bar">
+      <div class="run-identity"><span id="runStatus" class="status">NO RUN</span><div><strong id="scenarioName">Choose a golden scenario</strong><small id="runIdentifier">No active run</small></div></div>
+      <div class="run-clock"><small>VIRTUAL FACTORY TIME</small><strong id="virtualTime">—</strong></div>
+      <div class="run-speed"><label for="speed">Speed</label><select id="speed"><option>.1</option><option selected>1</option><option>5</option><option>10</option><option>60</option><option>300</option></select></div>
+      <div class="run-actions"><button id="streamControl" data-action="pause">Pause streaming</button><button data-action="step">Step +10s</button><button data-action="fork">Fork</button><button data-action="reset" class="danger">Reset run</button></div>
+    </header>
+    <div class="view-header"><div><p id="viewEyebrow">Factory truth and product interpretation</p><h1 id="viewTitle">Run a factory. Inspect every decision.</h1></div><p id="viewDescription">Create source facts, follow them through GenuineGigs, verify the inferred state, and test whether recovery actually works.</p></div>
+    <section id="workspace" aria-live="polite"></section>
+  </section>
+</main>
+<dialog id="inspector"><header><div><small>DEVELOPER INSPECTOR</small><h2 id="inspectorTitle">Details</h2></div><button onclick="closeInspector()">Close</button></header><div id="inspectorBody"></div></dialog>
+<div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

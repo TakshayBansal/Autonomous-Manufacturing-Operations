@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "genuinegigs.name" . }}-api
+  labels:
+    {{- include "genuinegigs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.replicaCount.api }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.api.repository }}:{{ .Values.image.api.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: {{ include "genuinegigs.name" . }}-runtime
+          env:
+            {{- include "genuinegigs.secretEnv" . | nindent 12 }}
+          readinessProbe:
+            httpGet: {path: /health/ready, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health/live, port: http}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+        - name: opa
+          image: {{ .Values.image.opa | quote }}
+          args: ["run", "--server", "--addr=127.0.0.1:8181", "/policies/genuinegigs.rego"]
+          ports:
+            - name: opa
+              containerPort: 8181
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: opa-policy, mountPath: /policies, readOnly: true}
+      volumes:
+        - name: opa-policy
+          configMap: {name: {{ include "genuinegigs.name" . }}-opa-policy}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "genuinegigs.name" . }}-api
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: {{ .Values.service.apiPort }}
+      targetPort: http

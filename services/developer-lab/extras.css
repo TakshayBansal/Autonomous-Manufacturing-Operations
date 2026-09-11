@@ -1,0 +1,2 @@
+.graph-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.error { padding: 10px; border-left: 3px solid #b42318; background: #ffebe9; color: #b42318; font-size: 9px; }

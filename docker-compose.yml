@@ -1,0 +1,394 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: genuinegigs
+      POSTGRES_PASSWORD: genuinegigs_dev
+      POSTGRES_DB: genuinegigs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genuinegigs -d genuinegigs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: genuinegigs
+      MINIO_ROOT_PASSWORD: genuinegigs_dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 genuinegigs genuinegigs_dev &&
+        mc mb --ignore-existing local/genuinegigs-documents &&
+        mc mb --ignore-existing local/genuinegigs-quarantine &&
+        mc mb --ignore-existing local/genuinegigs-evidence &&
+        mc version enable local/genuinegigs-documents &&
+        mc version enable local/genuinegigs-quarantine &&
+        mc version enable local/genuinegigs-evidence &&
+        mc anonymous set none local/genuinegigs-documents &&
+        mc anonymous set none local/genuinegigs-quarantine &&
+        mc anonymous set none local/genuinegigs-evidence
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  opa:
+    image: openpolicyagent/opa:0.70.0-static
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies/genuinegigs.rego"]
+    volumes:
+      - ./infra/opa:/policies:ro
+    ports:
+      - "8181:8181"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    build:
+      context: ./apps/api
+    entrypoint: ["alembic"]
+    command: ["upgrade", "head"]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      SESSION_SECRET: genuinegigs-local-session-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    build:
+      context: ./apps/api
+    entrypoint: ["python"]
+    command: ["-m", "app.db.seed_cli"]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      SESSION_SECRET: genuinegigs-local-session-secret
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  seed-v2-simulation:
+    profiles: ["simulation", "developer-lab"]
+    build:
+      context: ./apps/api
+    entrypoint: ["python"]
+    command: ["-m", "app.db.seed_v2_cli"]
+    environment:
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      SESSION_SECRET: genuinegigs-local-session-secret
+      V2_SIMULATION_PASSWORD: ${V2_SIMULATION_PASSWORD:-Northstar@2026}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  seed-platform-demos:
+    profiles: ["simulation", "developer-lab"]
+    build:
+      context: ./apps/api
+    entrypoint: ["python"]
+    command: ["-m", "app.platform.seed_cli"]
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      SESSION_SECRET: genuinegigs-local-session-secret
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  factory-simulator:
+    profiles: ["simulation", "developer-lab"]
+    build:
+      context: ./services/factory-simulator
+    environment:
+      FACTORY_SIMULATOR_TOKEN: ${FACTORY_SIMULATOR_TOKEN:-northstar-local-simulator-token}
+      FACTORY_SIMULATOR_STATE_FILE: /data/factory-state.json
+      FACTORY_LAB_STATE_FILE: /data/lab-runs.json
+      LAB_SMTP_HOST: mailpit
+      LAB_SMTP_PORT: 1025
+    volumes:
+      - factory-simulator-data:/data
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8090/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mqtt:
+    profiles: ["developer-lab"]
+    image: eclipse-mosquitto:2
+    command: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+    volumes:
+      - ./infra/developer-lab/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+    ports:
+      - "1883:1883"
+
+  ot-simulator:
+    profiles: ["developer-lab"]
+    build:
+      context: ./services/ot-simulator
+    environment:
+      FACTORY_SIMULATOR_URL: http://factory-simulator:8090
+      FACTORY_SIMULATOR_TOKEN: ${FACTORY_SIMULATOR_TOKEN:-northstar-local-simulator-token}
+      MQTT_HOST: mqtt
+    ports:
+      - "4840:4840"
+    depends_on:
+      factory-simulator:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+
+  lab-edge-bridge:
+    profiles: ["developer-lab"]
+    build:
+      context: ./services/ot-simulator
+    command: ["python", "edge_bridge.py"]
+    environment:
+      GENUINEGIGS_API_URL: http://api:8000
+      MQTT_HOST: mqtt
+    depends_on:
+      mqtt:
+        condition: service_started
+      api:
+        condition: service_healthy
+
+  jaeger:
+    profiles: ["developer-lab"]
+    image: jaegertracing/all-in-one:1.64.0
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+
+  developer-lab:
+    profiles: ["developer-lab"]
+    build:
+      context: ./services/developer-lab
+    environment:
+      FACTORY_SIMULATOR_URL: http://factory-simulator:8090
+      GENUINEGIGS_API_URL: http://api:8000
+      FACTORY_SIMULATOR_TOKEN: ${FACTORY_SIMULATOR_TOKEN:-northstar-local-simulator-token}
+      DEVELOPER_LAB_TOKEN: ${DEVELOPER_LAB_TOKEN:-northstar-developer-local}
+      # Docker's internal listener is published only through host loopback below.
+      DEVELOPER_LAB_BIND_HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:3100:3100"
+    depends_on:
+      factory-simulator:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3100/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      APP_ENV: development
+      AI_PROVIDER: ${AI_PROVIDER:-groq}
+      AGENT_ENABLED: ${AGENT_ENABLED:-true}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      QUOTATION_EXTRACTION_PROVIDER: ${QUOTATION_EXTRACTION_PROVIDER:-groq}
+      GROQ_QUOTATION_EXTRACTION_MODEL: ${GROQ_QUOTATION_EXTRACTION_MODEL:-openai/gpt-oss-20b}
+      GROQ_QUOTATION_EXTRACTION_MAX_COMPLETION_TOKENS: ${GROQ_QUOTATION_EXTRACTION_MAX_COMPLETION_TOKENS:-3072}
+      GROQ_QUOTATION_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS: ${GROQ_QUOTATION_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS:-4096}
+      GROQ_QUOTATION_EXTRACTION_REASONING_EFFORT: ${GROQ_QUOTATION_EXTRACTION_REASONING_EFFORT:-low}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_EXTRACTION_MODEL: ${GEMINI_EXTRACTION_MODEL:-gemini-3.6-flash}
+      GEMINI_EXTRACTION_MAX_OUTPUT_TOKENS: ${GEMINI_EXTRACTION_MAX_OUTPUT_TOKENS:-4096}
+      LLAMA_CLOUD_API_KEY: ${LLAMA_CLOUD_API_KEY:-}
+      LLAMAPARSE_BASE_URL: ${LLAMAPARSE_BASE_URL:-https://api.cloud.llamaindex.ai}
+      AGENT_ALLOW_DETERMINISTIC_FALLBACK: "true"
+      AGENT_PRIMARY_MODEL: ${AGENT_PRIMARY_MODEL:-openai/gpt-oss-120b}
+      AGENT_FAST_MODEL: ${AGENT_FAST_MODEL:-llama-3.1-8b-instant}
+      AGENT_EXTRACTION_MODEL: ${AGENT_EXTRACTION_MODEL:-openai/gpt-oss-120b}
+      AGENT_EXTRACTION_MAX_COMPLETION_TOKENS: ${AGENT_EXTRACTION_MAX_COMPLETION_TOKENS:-8192}
+      AGENT_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS: ${AGENT_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS:-16384}
+      AGENT_EXTRACTION_REASONING_EFFORT: ${AGENT_EXTRACTION_REASONING_EFFORT:-low}
+      AGENT_PLANNING_MAX_OUTPUT_TOKENS: ${AGENT_PLANNING_MAX_OUTPUT_TOKENS:-1200}
+      AGENT_RESPONSE_MAX_OUTPUT_TOKENS: ${AGENT_RESPONSE_MAX_OUTPUT_TOKENS:-350}
+      AGENT_PROVIDER_REQUEST_TARGET_TOKENS: ${AGENT_PROVIDER_REQUEST_TARGET_TOKENS:-6800}
+      AGENT_RECENT_RAW_TURNS: ${AGENT_RECENT_RAW_TURNS:-4}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      REDIS_URL: redis://redis:6379/0
+      OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_BUCKET: genuinegigs-documents
+      OBJECT_STORAGE_QUARANTINE_BUCKET: genuinegigs-quarantine
+      OBJECT_STORAGE_EVIDENCE_BUCKET: genuinegigs-evidence
+      OBJECT_STORAGE_ACCESS_KEY: genuinegigs
+      OBJECT_STORAGE_SECRET_KEY: genuinegigs_dev
+      SESSION_SECRET: genuinegigs-local-session-secret
+      CELERY_TASK_ALWAYS_EAGER: "false"
+      OPA_URL: http://opa:8181
+      OPA_MODE: ${OPA_MODE:-shadow}
+      SMTP_MODE: simulation
+      ERP_LIVE_ENABLED: "false"
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: procurement@genuinegigs.local
+      FACTORY_SIMULATOR_URL: http://factory-simulator:8090
+      FACTORY_SIMULATOR_TOKEN: ${FACTORY_SIMULATOR_TOKEN:-northstar-local-simulator-token}
+      DEVELOPER_LAB_TOKEN: ${DEVELOPER_LAB_TOKEN:-northstar-developer-local}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: genuinegigs-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+      opa:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: ./apps/api
+    entrypoint: ["celery"]
+    command: ["-A", "app.celery_app.celery_app", "worker", "-Q", "agents,documents,integrations,email,sync,events,specialists,scm", "--loglevel=INFO"]
+    environment: &api-runtime-env
+      APP_ENV: development
+      DATABASE_URL: postgresql://genuinegigs:genuinegigs_dev@postgres:5432/genuinegigs
+      REDIS_URL: redis://redis:6379/0
+      OBJECT_STORAGE_ENDPOINT: http://minio:9000
+      OBJECT_STORAGE_QUARANTINE_BUCKET: genuinegigs-quarantine
+      OBJECT_STORAGE_EVIDENCE_BUCKET: genuinegigs-evidence
+      OBJECT_STORAGE_ACCESS_KEY: genuinegigs
+      OBJECT_STORAGE_SECRET_KEY: genuinegigs_dev
+      SESSION_SECRET: genuinegigs-local-session-secret
+      AI_PROVIDER: ${AI_PROVIDER:-groq}
+      AGENT_ENABLED: ${AGENT_ENABLED:-true}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      QUOTATION_EXTRACTION_PROVIDER: ${QUOTATION_EXTRACTION_PROVIDER:-groq}
+      GROQ_QUOTATION_EXTRACTION_MODEL: ${GROQ_QUOTATION_EXTRACTION_MODEL:-openai/gpt-oss-20b}
+      GROQ_QUOTATION_EXTRACTION_MAX_COMPLETION_TOKENS: ${GROQ_QUOTATION_EXTRACTION_MAX_COMPLETION_TOKENS:-3072}
+      GROQ_QUOTATION_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS: ${GROQ_QUOTATION_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS:-4096}
+      GROQ_QUOTATION_EXTRACTION_REASONING_EFFORT: ${GROQ_QUOTATION_EXTRACTION_REASONING_EFFORT:-low}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_EXTRACTION_MODEL: ${GEMINI_EXTRACTION_MODEL:-gemini-3.6-flash}
+      GEMINI_EXTRACTION_MAX_OUTPUT_TOKENS: ${GEMINI_EXTRACTION_MAX_OUTPUT_TOKENS:-4096}
+      LLAMA_CLOUD_API_KEY: ${LLAMA_CLOUD_API_KEY:-}
+      LLAMAPARSE_BASE_URL: ${LLAMAPARSE_BASE_URL:-https://api.cloud.llamaindex.ai}
+      AGENT_ALLOW_DETERMINISTIC_FALLBACK: "true"
+      AGENT_PRIMARY_MODEL: ${AGENT_PRIMARY_MODEL:-openai/gpt-oss-120b}
+      AGENT_FAST_MODEL: ${AGENT_FAST_MODEL:-llama-3.1-8b-instant}
+      AGENT_EXTRACTION_MODEL: ${AGENT_EXTRACTION_MODEL:-openai/gpt-oss-120b}
+      AGENT_EXTRACTION_MAX_COMPLETION_TOKENS: ${AGENT_EXTRACTION_MAX_COMPLETION_TOKENS:-8192}
+      AGENT_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS: ${AGENT_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS:-16384}
+      AGENT_EXTRACTION_REASONING_EFFORT: ${AGENT_EXTRACTION_REASONING_EFFORT:-low}
+      AGENT_PLANNING_MAX_OUTPUT_TOKENS: ${AGENT_PLANNING_MAX_OUTPUT_TOKENS:-1200}
+      AGENT_RESPONSE_MAX_OUTPUT_TOKENS: ${AGENT_RESPONSE_MAX_OUTPUT_TOKENS:-350}
+      AGENT_PROVIDER_REQUEST_TARGET_TOKENS: ${AGENT_PROVIDER_REQUEST_TARGET_TOKENS:-6800}
+      AGENT_RECENT_RAW_TURNS: ${AGENT_RECENT_RAW_TURNS:-4}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_MODE: simulation
+      ERP_PROVIDER: local
+      ERP_WRITE_MODE: simulation
+      ERP_LIVE_ENABLED: "false"
+      OPA_URL: http://opa:8181
+      OPA_MODE: ${OPA_MODE:-shadow}
+      FACTORY_SIMULATOR_URL: http://factory-simulator:8090
+      FACTORY_SIMULATOR_TOKEN: ${FACTORY_SIMULATOR_TOKEN:-northstar-local-simulator-token}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME: genuinegigs-worker
+    depends_on:
+      api:
+        condition: service_healthy
+
+  beat:
+    build:
+      context: ./apps/api
+    entrypoint: ["celery"]
+    command: ["-A", "app.celery_app.celery_app", "beat", "--loglevel=INFO"]
+    environment: *api-runtime-env
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_SHOW_SIMULATION_ACCOUNTS: "false"
+        API_INTERNAL_BASE_URL: http://api:8000
+    environment:
+      API_INTERNAL_BASE_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  factory-simulator-data:
+  mqtt-data:

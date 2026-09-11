@@ -1,0 +1,8 @@
+{
+  "write_strategy": "new_version_only",
+  "required_sheets": [
+    "POExport",
+    "ExceptionExport",
+    "SyncLog"
+  ]
+}

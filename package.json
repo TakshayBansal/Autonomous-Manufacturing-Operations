@@ -1,0 +1,46 @@
+{
+  "name": "genuinegigs-manufacturing-agent-os",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Manufacturing Agent OS starting with a procurement agent module.",
+  "workspaces": [
+    "apps/web",
+    "website",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:website": "npm --workspace website run dev",
+    "build:web": "npm --workspace apps/web run build",
+    "check:v2-performance": "npm --workspace apps/web run check:v2-performance",
+    "build:website": "npm --workspace website run build",
+    "typecheck:website": "npm --workspace website run typecheck",
+    "lint:web": "npm --workspace apps/web run lint",
+    "typecheck": "npm --workspace apps/web run lint",
+    "generate:api": "npm exec --yes --package=openapi-typescript -- openapi-typescript http://localhost:8000/openapi.json -o packages/shared/src/api.generated.ts && cd apps/api && .venv/bin/python scripts/stamp_openapi_contract.py",
+    "check:api-contract": "cd apps/api && .venv/bin/python scripts/check_openapi_contract.py",
+    "test:e2e": "npm exec --yes --package=@playwright/test --package=@axe-core/playwright -- playwright test",
+    "dev:api": "cd apps/api && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "test:api": "cd apps/api && .venv/bin/pytest",
+    "seed:platform-demos": "cd apps/api && .venv/bin/python -m app.platform.seed_cli"
+    ,"backfill:platform": "cd apps/api && .venv/bin/python -m app.platform.backfill_cli"
+    ,"test:v2-simulation": "bash scripts/test-v2-simulation.sh"
+  },
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10",
+    "python": ">=3.12"
+  },
+  "dependencies": {
+    "eslint-config-next": "^16.2.10",
+    "next": "16.2.11"
+  },
+  "overrides": {
+    "postcss": "8.5.26",
+    "sharp": "0.35.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1"
+  }
+}

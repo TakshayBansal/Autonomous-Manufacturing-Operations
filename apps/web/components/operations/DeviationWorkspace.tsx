@@ -1,0 +1,32 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Bot, CheckCircle2, Clock3, FileSearch, UserRound } from "lucide-react";
+import { commandV2Action, commandV2Deviation, getV2Deviation, getV2RecoveryForDeviation } from "@/lib/api";
+import { RecoveryOptions } from "./recovery/RecoveryOptions";
+import { V2QueryFrame } from "./V2QueryFrame";
+import { useV2Formatting } from "./V2Formatting";
+import { CausalChain, DependencyGraph } from "./CausalChain";
+import { openContextualGigi } from "./OperationalPrimitives";
+
+function DeviationContent({ id }: { id: string }) {
+  const format=useV2Formatting();
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ["deviation", id], queryFn: () => getV2Deviation(id) });
+  const recovery = useQuery({ queryKey: ["recovery", id], queryFn: () => getV2RecoveryForDeviation(id) });
+  const refresh = () => client.invalidateQueries({ queryKey: ["deviation", id] });
+  const actionMutation = useMutation({ mutationFn: ({ actionId, command }: { actionId: string; command: "start" | "complete" }) => commandV2Action(actionId, command, command === "complete" ? { summary: "Recovery work completed" } : {}), onSuccess: refresh });
+  const deviationMutation = useMutation({ mutationFn: (command: "acknowledge" | "verify") => commandV2Deviation(id, command, command === "verify" ? { recovered_value: 12500, recovered_units: 140, summary: "Output trajectory recovered" } : {}), onSuccess: refresh });
+  if (query.isLoading) return <div className="v2-loading-region">Loading deviation evidence…</div>;
+  if (query.error || !query.data) return <div className="v2-degraded"><AlertTriangle/><strong>Deviation could not be loaded.</strong></div>;
+  const item = query.data, action = item.actions?.[0];
+  const primary = item.status === "detected" ? <button onClick={() => deviationMutation.mutate("acknowledge")}>Acknowledge</button> : action?.status === "open" || action?.status === "accepted" ? <button onClick={() => actionMutation.mutate({ actionId: action.id, command: "start" })}>Start recovery</button> : action?.status === "in_progress" || action?.status === "waiting" ? <button onClick={() => actionMutation.mutate({ actionId: action.id, command: "complete" })}>Complete action</button> : item.status === "monitoring" || item.status === "resolved" ? <button onClick={() => deviationMutation.mutate("verify")}>Verify outcome</button> : null;
+  return <><section className="v2-deviation-hero"><div><p>{item.category} · {item.subtype}</p><h1>{item.title}</h1><div className="v2-entity-row"><span className={`v2-state ${item.severity}`}>{item.severity}</span><span>{item.status.replaceAll("_", " ")}</span><span>Started {format.time(item.started_at)}</span></div></div><div className="v2-impact-numbers"><div><span>Lost output</span><strong>{format.number(item.lost_units)} units</strong></div><div><span>Value at risk</span><strong>{item.financial_impact==null?"Restricted":format.money(item.financial_impact,item.currency)}</strong></div></div></section>
+    {recovery.data&&<RecoveryOptions recovery={recovery.data}/>} 
+    {item.causal_context&&<CausalChain context={item.causal_context}/>} 
+    <div className="v2-deviation-grid"><section className="v2-panel"><div className="v2-panel-heading"><div><p>Evidence and history</p><h2>Observed facts</h2></div><FileSearch/></div><div className="v2-event-list"><div><i/><span>System</span><p>Detector identified the deviation from canonical production records.</p></div>{item.causal_context?.contributors.map(row=><div key={row.label}><i/><span>{row.source}</span><p><strong>{row.label}:</strong> {String(row.value)}</p></div>)}{item.evidence?.map((e, index) => <div key={index}><i/><span>{String(e.source_system ?? "Evidence")}</span><p>{String(e.summary ?? "Linked evidence")}</p></div>)}</div></section>
+      <section className="v2-panel"><div className="v2-panel-heading"><div><p>Understanding</p><h2>Impact and likely contributors</h2></div><Bot/></div><div className="v2-understanding"><h3>Expected versus actual</h3><div className="v2-state-comparison"><div><span>Expected</span>{Object.entries(item.expected_state).map(([key,value])=><p key={key}><b>{key.replaceAll("_"," ")}</b>{String(value)}</p>)}</div><div><span>Actual</span>{Object.entries(item.actual_state).map(([key,value])=><p key={key}><b>{key.replaceAll("_"," ")}</b>{String(value)}</p>)}</div></div><h3>Ranked hypotheses</h3>{item.causal_context?.hypotheses.map(row=><article className="v2-hypothesis" key={row.title}><header><strong>{row.title}</strong><span>{row.confidence} confidence · unconfirmed</span></header><p>{row.basis}</p></article>)}{item.causal_context?.confirmed_cause&&<div className="v2-confirmed-cause"><span>Confirmed cause</span><strong>{item.causal_context.confirmed_cause}</strong></div>}<h3>Similar incidents</h3><div className="v2-similar-incidents">{item.causal_context?.similar_incidents.length?item.causal_context.similar_incidents.map(row=><div key={row.id}><span>{format.time(row.detected_at)}</span><strong>{row.title}</strong><small>{row.status.replaceAll("_"," ")}</small></div>):<p>No prior incident with the same detector is available.</p>}</div></div></section>
+      <aside className="v2-panel v2-recovery-aside"><div className="v2-panel-heading"><div><p>Recovery</p><h2>Ownership and action</h2></div><UserRound/></div><dl><dt>Owner</dt><dd>{item.owner_role?.replaceAll("_", " ") ?? "Unassigned"}</dd><dt>Current action</dt><dd>{action?.title ?? "No action"}</dd><dt>Action state</dt><dd>{action?.status.replaceAll("_", " ") ?? "—"}</dd><dt>Due</dt><dd>{action?.due_at?format.time(action.due_at):"No SLA"}</dd></dl><h3>Blocking dependencies</h3>{item.causal_context&&<DependencyGraph context={item.causal_context}/>} {primary}<button className="secondary" onClick={()=>openContextualGigi(`Deviation · ${item.title}`,`Explain this deviation, the strongest evidence, unresolved hypotheses, and the safest recovery step: ${item.title}`)}><Bot/> Ask Gigi</button>{(actionMutation.error||deviationMutation.error)&&<p className="v2-form-error" role="alert">{(actionMutation.error||deviationMutation.error) instanceof Error?(actionMutation.error||deviationMutation.error)?.message:"The recovery command could not be completed."}</p>}</aside></div></>;
+}
+
+export function DeviationWorkspace({ id }: { id: string }) { return <V2QueryFrame>{() => <DeviationContent id={id}/>}</V2QueryFrame>; }

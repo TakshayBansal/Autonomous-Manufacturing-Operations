@@ -1,0 +1,1 @@
+{"version":1,"signature":"replace-with-base64-ed25519-signature","gateway_url":"https://genuinegigs.example","identity_fingerprint":"replace-with-certificate-fingerprint","poll_seconds":10,"sources":[{"name":"CNC-04 state","protocol":"opcua","address":"ns=2;s=CNC04.State","asset_id":"asset-cnc-04","canonical_signal":"machine.state","scale":1}]}

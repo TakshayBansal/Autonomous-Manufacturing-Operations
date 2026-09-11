@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "genuinegigs.name" . }}-runtime
+  labels:
+    {{- include "genuinegigs.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  ALLOWED_ORIGINS: {{ .Values.config.allowedOrigins | quote }}
+  AI_PROVIDER: {{ .Values.config.aiProvider | quote }}
+  AGENT_ENABLED: {{ .Values.config.agentEnabled | quote }}
+  AGENT_PRIMARY_MODEL: {{ .Values.config.agentPrimaryModel | quote }}
+  AGENT_FAST_MODEL: {{ .Values.config.agentFastModel | quote }}
+  AGENT_EXTRACTION_MODEL: {{ .Values.config.agentExtractionModel | quote }}
+  AGENT_EXTRACTION_MAX_COMPLETION_TOKENS: {{ .Values.config.agentExtractionMaxCompletionTokens | quote }}
+  AGENT_EXTRACTION_RETRY_MAX_COMPLETION_TOKENS: {{ .Values.config.agentExtractionRetryMaxCompletionTokens | quote }}
+  AGENT_EXTRACTION_REASONING_EFFORT: {{ .Values.config.agentExtractionReasoningEffort | quote }}
+  QUOTATION_EXTRACTION_PROVIDER: {{ .Values.config.quotationExtractionProvider | quote }}
+  GEMINI_EXTRACTION_MODEL: {{ .Values.config.geminiExtractionModel | quote }}
+  GEMINI_EXTRACTION_MAX_OUTPUT_TOKENS: {{ .Values.config.geminiExtractionMaxOutputTokens | quote }}
+  LLAMAPARSE_BASE_URL: {{ .Values.config.llamaparseBaseUrl | quote }}
+  LLAMAPARSE_TIMEOUT_SECONDS: {{ .Values.config.llamaparseTimeoutSeconds | quote }}
+  AGENT_PLANNING_MAX_OUTPUT_TOKENS: {{ .Values.config.agentPlanningMaxOutputTokens | quote }}
+  AGENT_RESPONSE_MAX_OUTPUT_TOKENS: {{ .Values.config.agentResponseMaxOutputTokens | quote }}
+  AGENT_PROVIDER_REQUEST_TARGET_TOKENS: {{ .Values.config.agentProviderRequestTargetTokens | quote }}
+  AGENT_RECENT_RAW_TURNS: {{ .Values.config.agentRecentRawTurns | quote }}
+  AGENT_MAX_RUN_SECONDS: {{ .Values.config.agentMaxRunSeconds | quote }}
+  AGENT_MAX_HANDOFFS: {{ .Values.config.agentMaxHandoffs | quote }}
+  AGENT_MAX_DELEGATION_DEPTH: {{ .Values.config.agentMaxDelegationDepth | quote }}
+  AGENT_CONVERSATION_RETENTION_DAYS: {{ .Values.config.agentRetentionDays | quote }}
+  AGENT_CHECKPOINT_RETENTION_DAYS: {{ .Values.config.agentCheckpointRetentionDays | quote }}
+  RETENTION_ENFORCEMENT_ENABLED: {{ .Values.config.retentionEnforcementEnabled | quote }}
+  AGENT_TRACE_EXPORT_ENABLED: {{ .Values.config.traceExportEnabled | quote }}
+  OBJECT_STORAGE_SECURE: {{ .Values.config.objectStorageSecure | quote }}
+  ERP_WRITE_MODE: {{ .Values.config.erpWriteMode | quote }}
+  ERP_LIVE_ENABLED: {{ .Values.config.erpLiveEnabled | quote }}
+  SMTP_MODE: {{ .Values.config.smtpMode | quote }}
+  OPA_URL: "http://127.0.0.1:8181"
+  OPA_MODE: {{ .Values.config.opaMode | quote }}
+  OPA_POLICY_VERSION: {{ .Values.config.opaPolicyVersion | quote }}
+  SANDBOX_PROVIDER: {{ .Values.config.sandboxProvider | quote }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "genuinegigs.name" . }}-opa-policy
+data:
+  genuinegigs.rego: |
+{{ .Files.Get "policies/genuinegigs.rego" | indent 4 }}

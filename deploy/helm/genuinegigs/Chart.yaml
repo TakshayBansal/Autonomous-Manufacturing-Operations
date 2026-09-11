@@ -1,0 +1,6 @@
+apiVersion: v2
+name: genuinegigs
+description: GenuineGigs Manufacturing Role-Agent Operating System
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

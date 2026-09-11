@@ -1,0 +1,48 @@
+{{- range $name, $worker := dict "agent" (dict "replicas" .Values.replicaCount.agentWorker "queues" "agents,specialists") "workflow" (dict "replicas" .Values.replicaCount.workflowWorker "queues" "documents,integrations,email,sync,events") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "genuinegigs.name" $ }}-{{ $name }}-worker
+  labels:
+    {{- include "genuinegigs.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}-worker
+spec:
+  replicas: {{ $worker.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "genuinegigs.name" $ }}
+      app.kubernetes.io/component: {{ $name }}-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "genuinegigs.name" $ }}
+        app.kubernetes.io/component: {{ $name }}-worker
+    spec:
+      containers:
+        - name: worker
+          image: "{{ $.Values.image.api.repository }}:{{ $.Values.image.api.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          command: ["celery"]
+          args: ["-A", "app.celery_app.celery_app", "worker", "-Q", "{{ $worker.queues }}", "--loglevel=INFO"]
+          envFrom:
+            - configMapRef:
+                name: {{ include "genuinegigs.name" $ }}-runtime
+          env:
+            {{- include "genuinegigs.secretEnv" $ | nindent 12 }}
+          resources:
+            {{- toYaml $.Values.resources.worker | nindent 12 }}
+        - name: opa
+          image: {{ $.Values.image.opa | quote }}
+          args: ["run", "--server", "--addr=127.0.0.1:8181", "/policies/genuinegigs.rego"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: opa-policy, mountPath: /policies, readOnly: true}
+      volumes:
+        - name: opa-policy
+          configMap: {name: {{ include "genuinegigs.name" $ }}-opa-policy}
+---
+{{- end }}

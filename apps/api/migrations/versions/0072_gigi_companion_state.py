@@ -1,0 +1,8 @@
+"""Gigi insight delivery state. Revision ID: 0072_gigi_companion_state"""
+from alembic import op
+import sqlalchemy as sa
+revision="0072_gigi_companion_state"; down_revision="0071_value_attribution"; branch_labels=None; depends_on=None
+def upgrade():
+ if "gigi_insights" in set(sa.inspect(op.get_bind()).get_table_names()): return
+ op.create_table("gigi_insights",sa.Column("id",sa.String(64),primary_key=True),sa.Column("public_id",sa.String(36),nullable=False,unique=True),sa.Column("business_number",sa.String(80)),sa.Column("tenant_id",sa.String(64),nullable=False),sa.Column("plant_id",sa.String(64)),sa.Column("version",sa.Integer(),nullable=False,server_default="1"),sa.Column("created_at",sa.DateTime(timezone=True),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),nullable=False),sa.Column("case_id",sa.String(64),sa.ForeignKey("platform_operational_cases.id",ondelete="CASCADE")),sa.Column("membership_id",sa.String(64)),sa.Column("category",sa.String(80),nullable=False),sa.Column("severity",sa.String(24),nullable=False),sa.Column("title",sa.String(240),nullable=False),sa.Column("summary",sa.Text(),nullable=False),sa.Column("evidence",sa.JSON(),nullable=False),sa.Column("deduplication_signature",sa.String(180),nullable=False),sa.Column("delivery_state",sa.String(32),nullable=False),sa.Column("acknowledged_at",sa.DateTime(timezone=True)),sa.Column("dismissed_at",sa.DateTime(timezone=True)),sa.Column("snoozed_until",sa.DateTime(timezone=True)),sa.Column("next_evaluation_at",sa.DateTime(timezone=True)),sa.Column("escalation_state",sa.String(32),nullable=False),sa.UniqueConstraint("tenant_id","deduplication_signature",name="uq_gigi_insight_signature"))
+def downgrade(): op.drop_table("gigi_insights")

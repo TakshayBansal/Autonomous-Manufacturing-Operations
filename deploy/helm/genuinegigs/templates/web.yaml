@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "genuinegigs.name" . }}-web
+  labels:
+    {{- include "genuinegigs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.replicaCount.web }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+      app.kubernetes.io/component: web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+        app.kubernetes.io/component: web
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.image.web.repository }}:{{ .Values.image.web.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_BASE_URL
+              value: {{ .Values.config.publicApiBaseUrl | quote }}
+          readinessProbe:
+            httpGet: {path: /login, port: http}
+            initialDelaySeconds: 10
+          livenessProbe:
+            httpGet: {path: /login, port: http}
+            initialDelaySeconds: 20
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "genuinegigs.name" . }}-web
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "genuinegigs.name" . }}
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: {{ .Values.service.webPort }}
+      targetPort: http

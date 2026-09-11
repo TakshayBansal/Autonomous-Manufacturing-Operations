@@ -1,0 +1,64 @@
+/* GenuineGigs SCM product system
+   Authoritative SCM layer. Deliberately scoped beneath .scm-shell so the
+   Procurement and Operations products retain their own visual languages. */
+
+.scm-shell{
+  --scm-ink:#12201c;--scm-ink-2:#33443e;--scm-muted:#6a7974;--scm-faint:#89958f;
+  --scm-line:#dce3df;--scm-line-strong:#cbd5d0;--scm-canvas:#f3f6f4;--scm-panel:#fff;
+  --scm-primary:#075f50;--scm-primary-2:#0b7b66;--scm-critical:#d94b43;
+  --scm-watch:#d98a22;--scm-excess:#477fbd;--scm-action:#2877cf;
+  min-height:100vh;grid-template-columns:256px minmax(0,1fr);background:var(--scm-canvas);
+  color:var(--scm-ink);font-family:Geist,Arial,sans-serif;font-variant-numeric:tabular-nums;
+}
+.scm-shell *{box-sizing:border-box}
+.scm-workspace{min-width:0;background:linear-gradient(90deg,#f3f6f4 0,#f7f9f8 48%,#f3f6f4 100%)}
+
+/* Navigation: quiet, architectural and unmistakably operational. */
+.scm-sidebar{width:auto;padding:20px 14px 16px;background:#073b34;background-image:linear-gradient(180deg,#07443a 0,#06362f 48%,#052e29 100%);box-shadow:none;border-right:1px solid #174e45}
+.scm-brand{height:68px;padding:0 8px 18px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.1)}
+.scm-brand>span{width:38px;height:38px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:#0d7965;box-shadow:none}
+.scm-brand strong{font-size:16px;font-weight:750;letter-spacing:-.035em}.scm-brand small{margin-top:4px;color:#9dc7bd;font:600 8px/1 "IBM Plex Mono",monospace;letter-spacing:.16em}
+.scm-sidebar nav{gap:2px}.scm-sidebar nav a,.scm-sidebar-foot a{min-height:40px;padding:0 11px;border-radius:4px;color:#b9cec8;font:600 12px/1 Geist,sans-serif;transform:none}
+.scm-sidebar nav a:hover{background:rgba(255,255,255,.055);color:#fff;transform:none}.scm-sidebar nav a.active{background:#116b5b;color:#fff;box-shadow:inset 3px 0 #6dd1b5,inset 0 0 0 1px rgba(255,255,255,.06)}
+.scm-sidebar nav a svg,.scm-sidebar-foot a svg{width:16px;height:16px;stroke-width:1.8}.scm-sidebar nav a b{height:19px;min-width:19px;border-color:#59c7a9;font-size:8px}
+.scm-sidebar-foot{border-color:rgba(255,255,255,.11)}.scm-profile{min-height:62px!important;margin-top:8px!important;padding:11px 7px!important}.scm-profile>i{width:32px;height:32px;border-radius:4px;font-size:9px}.scm-profile>span strong{font-size:10px}.scm-profile>span small{font-size:8px}
+
+/* Context bar and real refresh feedback. */
+.scm-topbar{position:sticky;top:0;z-index:80;height:64px;padding:0 24px;gap:8px;background:rgba(255,255,255,.97);border-bottom:1px solid var(--scm-line);box-shadow:0 1px 0 rgba(16,41,34,.025);backdrop-filter:blur(10px)}
+.scm-context-item{height:38px;grid-template-columns:28px minmax(128px,auto) 12px;gap:8px;margin-right:4px;padding-right:16px}.scm-context-item>svg:first-child{width:15px;height:15px;padding:6px;border-radius:4px;border-color:var(--scm-line);background:#f8faf9}.scm-context-item small{font:600 7px/1 "IBM Plex Mono",monospace;letter-spacing:.12em}.scm-context-item strong{font-size:11px;font-weight:700}
+.scm-add-data{height:32px;padding:0 11px;border-radius:4px;background:var(--scm-primary);font-size:9px;letter-spacing:.01em}.scm-add-data:hover{background:var(--scm-primary-2)}
+.scm-refresh-status{min-width:112px;color:var(--scm-muted)!important;font-size:9px!important;letter-spacing:0!important;text-align:right;text-transform:none!important}.scm-refresh-status.refreshing{color:var(--scm-action)!important}.scm-refresh-status.updated{color:var(--scm-primary-2)!important}.scm-refresh-status.error{color:var(--scm-critical)!important}
+.scm-live{height:30px;padding:0 10px;border-left:1px solid var(--scm-line);border-radius:0;font:600 9px/1 "IBM Plex Mono",monospace}.scm-live i{width:6px;height:6px;box-shadow:0 0 0 3px #dcefe9}
+.scm-refresh{width:32px;height:32px;display:grid;place-items:center;padding:0;border:1px solid var(--scm-line)!important;border-radius:4px!important;background:#fff!important;transition:border-color .15s,background .15s,color .15s}.scm-refresh:hover{border-color:#8ab8ac!important;background:#f2faf7!important;color:var(--scm-primary)!important}.scm-refresh:disabled{cursor:wait;opacity:.72}
+
+/* Page rhythm and typography: compact workbench, not marketing dashboard. */
+.scm-main{width:100%;max-width:1760px;margin:0 auto;padding:24px 26px 36px}
+.scm-page-head{min-height:64px;margin:0 0 16px;align-items:flex-end}.scm-page-head .scm-eyebrow,.scm-page-head>div>span{display:block;margin:0 0 7px;color:var(--scm-primary-2);font:600 8px/1 "IBM Plex Mono",monospace;letter-spacing:.15em;text-transform:uppercase}
+.scm-page-head h1{margin:0 0 6px;color:#10201b;font:700 clamp(24px,2vw,31px)/1.08 Geist,sans-serif;letter-spacing:-.045em}.scm-page-head p{max-width:820px;color:var(--scm-muted);font-size:11px;line-height:1.55}
+.scm-head-actions{gap:7px}.scm-main button,.scm-panel>header a{min-height:34px;padding:0 12px;border:1px solid var(--scm-primary);border-radius:4px;background:var(--scm-primary);font:700 9px/1 Geist,sans-serif;box-shadow:none;transition:background .15s,border-color .15s,transform .1s}.scm-main button:hover{background:var(--scm-primary-2);border-color:var(--scm-primary-2)}.scm-main button:active{transform:translateY(1px)}.scm-main button.secondary{background:#fff;color:var(--scm-primary);border-color:var(--scm-line-strong)}.scm-main button.secondary:hover{background:#f2f8f6;border-color:#85b4a8}.scm-main button.ghost{background:transparent;border-color:transparent;color:var(--scm-muted)}
+
+/* Surfaces and tables share one geometry. */
+.scm-dashboard-panel,.scm-panel,.scm-table,.sh-workspace,.sh-drawer,.sh-insights article{border:1px solid var(--scm-line);border-radius:5px;background:var(--scm-panel);box-shadow:0 1px 2px rgba(18,45,37,.025)}
+.scm-dashboard-panel>header,.scm-panel>header{height:54px;min-height:54px;padding:0 14px;border-bottom:1px solid #e8ecea}.scm-dashboard-panel>header h2,.scm-panel>header h2{margin:0;color:var(--scm-ink);font-size:12px;font-weight:750;letter-spacing:-.015em}.scm-dashboard-panel>header p{margin-top:3px;font-size:8px}.scm-dashboard-panel>header a{font-size:9px}
+.scm-table-head{background:#f2f5f3;color:#5e6d67;font:600 8px/1 "IBM Plex Mono",monospace;letter-spacing:.06em}.scm-table-row{min-height:54px;color:var(--scm-ink);font-size:10px}.scm-table-row:hover{background:#f5faf8}.scm-table-row small{font-size:8px}.scm-badge{padding:3px 6px;border-radius:3px;font:700 7px/1.2 "IBM Plex Mono",monospace}
+
+/* KPI strip: measurement, not decoration. */
+.scm-kpi-strip{border-radius:5px;border-color:var(--scm-line);margin-bottom:12px}.scm-kpi-strip article{min-height:82px;padding:13px 12px;grid-template-columns:30px 1fr;border-color:var(--scm-line)}.scm-kpi-icon{width:29px;height:29px;border-radius:4px}.scm-kpi-icon svg{width:14px}.scm-kpi-strip strong{font-size:20px}.scm-kpi-strip small{font-size:8px}.scm-kpi-strip em{font-size:7px;margin-top:3px}.scm-spark{display:none}
+.scm-dashboard-grid,.scm-dashboard-bottom{gap:12px;margin-bottom:12px}.scm-critical-table .head,.scm-critical-table>a{padding:8px 12px}.scm-critical-table>a{min-height:45px}.scm-heatmap .heat-row>i{height:39px;border:2px solid #fff}.scm-readiness-card>div>i{width:88px;height:88px}.scm-plan-status{min-height:110px}
+
+/* Explorer: only real controls remain. */
+.scm-explorer-tools{gap:6px}.scm-explorer-tools>label{height:36px;border-radius:4px;border-color:var(--scm-line);background:#fff}.scm-explorer-tools>label:first-child{width:min(330px,28vw)}.scm-explorer-tools .scm-risk-select{width:150px}.scm-risk-select select{width:100%;border:0;outline:0;background:transparent;color:var(--scm-ink);font:600 9px Geist,sans-serif}.scm-explorer-tools input{font:500 9px Geist,sans-serif}.scm-explorer-tools .export-link{height:36px;padding:0 11px;border-radius:4px;font-size:9px}.scm-material-kpis{border-radius:5px}.scm-material-kpis article{min-height:66px}.scm-material-kpis>article>svg{width:15px;height:15px;padding:7px;border-radius:4px}.scm-material-kpis strong{font-size:17px}.scm-filter-chips{min-height:36px;border-radius:4px}.scm-filter-chips>span{padding:5px 8px;border-radius:3px;font-size:8px}
+
+/* Supply Horizon: the hero planning canvas. */
+.scm-main .supply-horizon-page{padding:0;background:transparent}.sh-page-head{margin:0 0 14px}.sh-page-head h1{font:700 28px/1.1 Geist,sans-serif;letter-spacing:-.045em}.sh-page-head p{font-size:11px}
+.sh-controls{gap:6px;margin-bottom:9px}.sh-controls>label,.sh-controls>div,.sh-controls>button{min-height:48px;padding:6px 10px;border-color:var(--scm-line);border-radius:4px}.sh-controls>label{min-width:145px}.sh-controls>label:nth-child(2){min-width:210px}.sh-controls small{font:600 7px/1 "IBM Plex Mono",monospace;letter-spacing:.11em}.sh-controls label span,.sh-controls select{font-size:10px}.sh-controls>div button{min-height:25px!important;padding:0 9px!important;border-radius:3px!important;font-size:8px!important}.sh-controls>div button.active{background:var(--scm-primary)!important}.scm-main .supply-horizon-page .sh-controls>button{min-height:48px;font-size:9px}
+.sh-kpis{gap:6px;margin-bottom:9px}.sh-kpis article{min-height:59px;padding:9px 10px;border-radius:4px}.sh-kpis article>i{width:29px;height:29px;border-radius:4px}.sh-kpis article>i svg{width:14px}.sh-kpis small{font-size:8px}.sh-kpis strong{font-size:17px}.sh-kpis em{font-size:7px}
+.sh-main{gap:8px;grid-template-columns:minmax(0,1fr) 338px}.sh-workspace{border-radius:5px}.sh-workspace>header{height:48px;padding:0 12px}.sh-workspace>header h2{font-size:11px}.sh-workspace>header p{font-size:8px}.sh-scroll{height:clamp(500px,64vh,710px)}.sh-sticky-axis{height:58px;background:#f3f6f4}.sh-material-head{padding-top:22px;background:#f3f6f4}.sh-axis{height:58px}.sh-months span{font-size:8px}.sh-ticks span{font-size:7px}.sh-row,.sh-material,.sh-track{height:60px!important}.sh-material{padding-top:9px}.sh-material strong{font-size:9px!important}.sh-material small{font-size:8px!important}.sh-material em{font-size:7px}.scm-main .supply-horizon-page .sh-band{top:27px;height:7px;box-shadow:none}.sh-event>b{font-size:7px}.sh-workspace>footer{font-size:7px;background:#fafcfb}.sh-drawer{border-radius:5px}.sh-drawer>header{height:41px;font-size:8px}.sh-drawer-title{padding:11px}.sh-drawer-title>i{width:32px;height:32px;border-radius:4px}.sh-drawer-title strong{font-size:11px}.sh-drawer section{padding:11px 12px}.sh-insights{gap:8px;margin-top:8px}.sh-insights article{min-height:134px;padding:10px;border-radius:5px}
+
+/* Forms/imports/scenarios retain the same workbench language. */
+.scm-import-grid,.scm-detail-grid,.data-entry-grid,.scenario-layout{gap:12px}.scm-upload{padding:24px}.data-entry-flow{border-radius:5px}.data-entry-form{box-shadow:-12px 0 40px rgba(7,40,32,.16)}.data-entry-form input,.data-entry-form select,.data-entry-form textarea{border-radius:4px}.scenario-create input{height:36px;border-radius:4px;background:#fff}.scenario-row{min-height:50px!important}
+
+@media(max-width:1280px){.scm-shell{grid-template-columns:224px minmax(0,1fr)}.scm-main{padding:20px}.scm-refresh-status{display:none}.sh-main{grid-template-columns:minmax(0,1fr) 320px}}
+@media(max-width:1050px){.scm-shell{grid-template-columns:68px minmax(0,1fr)}.scm-sidebar{padding-inline:8px}.sh-main{grid-template-columns:1fr}.scm-explorer-tools>label:first-child{width:250px}}
+@media(max-width:700px){.scm-shell{display:block}.scm-main{padding:15px 10px}.scm-page-head h1{font-size:24px}.scm-topbar{padding:0 10px}.scm-add-data{display:none}.scm-explorer-tools>label:first-child,.scm-explorer-tools .scm-risk-select{width:100%}.sh-page-head h1{font-size:23px}}
+.sh-controls .sh-current-view{min-width:96px}.sh-current-view strong{display:block;color:var(--scm-primary);font-size:10px}

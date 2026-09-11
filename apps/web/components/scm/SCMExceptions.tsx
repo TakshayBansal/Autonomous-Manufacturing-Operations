@@ -1,0 +1,12 @@
+"use client";
+
+import Link from "next/link";
+import { AlertTriangle, ArrowUpRight, Filter, Search } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { getSCMExceptions } from "@/lib/scm-api";
+import { SCMFrame } from "./SCMShell";
+
+function Exceptions(){const[severity,setSeverity]=useState("");const[material,setMaterial]=useState("");const params=new URLSearchParams();if(severity)params.set("severity",severity);if(material)params.set("material",material);const query=useQuery({queryKey:["scm-exceptions",severity,material],queryFn:()=>getSCMExceptions(params.toString())});return <><header className="scm-page-head"><div><span>PRIORITIZED ACTION QUEUE</span><h1>Exception workbench</h1><p>Start with consequence and urgency, then inspect the facts and proposed mitigation.</p></div></header><div className="scm-filters"><label><Search/><input value={material} onChange={e=>setMaterial(e.target.value)} placeholder="Search material code"/></label><label><Filter/><select value={severity} onChange={e=>setSeverity(e.target.value)}><option value="">All severities</option>{["CRITICAL","RED","ORANGE","YELLOW","GREEN","UNKNOWN"].map(value=><option key={value}>{value}</option>)}</select></label></div>{query.error?<div className="scm-state error"><AlertTriangle/><h2>Exceptions cannot be loaded</h2></div>:<section className="scm-table"><div className="scm-table-head"><span>Priority / material</span><span>Shortage</span><span>Exposure</span><span>Supplier</span><span>Recommendation</span><span/></div>{query.data?.map(risk=><div className="scm-table-row" key={risk.id}><div><span className={`scm-badge ${risk.severity.toLowerCase()}`}>{risk.severity}</span><strong>{risk.material.code}</strong><small>{risk.material.description}</small></div><div><strong>{risk.stockout_date??"—"}</strong><small>{risk.shortage_qty.toLocaleString()} units peak</small></div><div><strong>{risk.affected_finished_goods_count} finished goods</strong><small>{risk.affected_customers_count} customers</small></div><div><strong>{risk.supplier?.name??"Not assigned"}</strong></div><div><strong>{risk.recommendations[0]?.action_type.replaceAll("_"," ")??"Review data"}</strong><small>{risk.recommendations[0]?.quantity.toLocaleString()??"—"}</small></div><Link href={`/scm/materials/${risk.material.id}`} aria-label={`Open ${risk.material.code}`}><ArrowUpRight/></Link></div>)}</section>}</>}
+export function SCMExceptions(){return <SCMFrame><Exceptions/></SCMFrame>}
+

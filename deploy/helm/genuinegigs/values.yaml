@@ -1,0 +1,85 @@
+image:
+  api:
+    repository: genuinegigs/api
+    tag: latest
+  web:
+    repository: genuinegigs/web
+    tag: latest
+  pullPolicy: IfNotPresent
+  opa: openpolicyagent/opa:0.70.0-static
+
+replicaCount:
+  api: 2
+  web: 2
+  agentWorker: 2
+  workflowWorker: 2
+
+service:
+  apiPort: 8000
+  webPort: 3000
+
+config:
+  appEnv: production
+  allowedOrigins: https://operations.example.com
+  publicApiBaseUrl: https://api.example.com
+  aiProvider: groq
+  agentEnabled: "false"
+  agentPrimaryModel: openai/gpt-oss-120b
+  agentFastModel: llama-3.1-8b-instant
+  agentExtractionModel: openai/gpt-oss-120b
+  agentExtractionMaxCompletionTokens: "8192"
+  agentExtractionRetryMaxCompletionTokens: "16384"
+  agentExtractionReasoningEffort: low
+  quotationExtractionProvider: gemini
+  geminiExtractionModel: gemini-3.6-flash
+  geminiExtractionMaxOutputTokens: "4096"
+  llamaparseBaseUrl: https://api.cloud.llamaindex.ai
+  llamaparseTimeoutSeconds: "120"
+  agentPlanningMaxOutputTokens: "1200"
+  agentResponseMaxOutputTokens: "350"
+  agentProviderRequestTargetTokens: "6800"
+  agentRecentRawTurns: "4"
+  agentMaxRunSeconds: "120"
+  agentMaxHandoffs: "8"
+  agentMaxDelegationDepth: "3"
+  agentRetentionDays: "365"
+  agentCheckpointRetentionDays: "30"
+  retentionEnforcementEnabled: "false"
+  traceExportEnabled: "false"
+  objectStorageSecure: "true"
+  erpWriteMode: simulation
+  erpLiveEnabled: "false"
+  smtpMode: simulation
+  opaMode: shadow
+  opaPolicyVersion: agentic-procurement-v1
+  sandboxProvider: hardened
+
+secretRef:
+  name: genuinegigs-runtime
+  databaseUrlKey: database-url
+  redisUrlKey: redis-url
+  sessionSecretKey: session-secret
+  groqApiKeyKey: groq-api-key
+  llamaCloudApiKeyKey: llama-cloud-api-key
+  geminiApiKeyKey: gemini-api-key
+  objectStorageEndpointKey: object-storage-endpoint
+  objectStorageAccessKeyKey: object-storage-access-key
+  objectStorageSecretKeyKey: object-storage-secret-key
+
+resources:
+  api:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  web:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {cpu: 500m, memory: 512Mi}
+  worker:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "2", memory: 2Gi}
+
+ingress:
+  enabled: false
+  className: nginx
+  webHost: operations.example.com
+  apiHost: api.example.com
+  tlsSecretName: genuinegigs-tls

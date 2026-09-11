@@ -1,0 +1,8 @@
+"use client";
+import Link from "next/link";
+import {useQuery} from "@tanstack/react-query";
+import {AlertTriangle,ArrowRight,Clock3,ShieldCheck} from "lucide-react";
+import {ProductShell} from "@/components/platform/ProductShell";
+import {listCases} from "@/lib/case-api";
+import "./cases.css";
+export default function CasesPage(){const query=useQuery({queryKey:["operational-cases"],queryFn:listCases});return <ProductShell module="cases" title="Cases" navigation={[]}><main className="case-index"><header><p>OPERATIONAL CASES</p><h1>Resolve disruption around the commitment at risk.</h1><span>One lifecycle across supply, procurement and plant execution.</span></header>{query.isLoading?<div className="case-state">Loading operational cases…</div>:query.error?<div className="case-state error"><AlertTriangle/><strong>Cases are unavailable.</strong><button onClick={()=>query.refetch()}>Retry</button></div>:!query.data?.length?<div className="case-state"><ShieldCheck/><strong>No active cases</strong><span>New domain detections will converge here.</span></div>:<section className="case-list">{query.data.map(row=><Link href={`/cases/${row.id}`} key={row.id}><i className={row.severity}/><div><small>{row.case_type.replaceAll("_"," ")} · {row.responsible_team??"Shared response"}</small><h2>{row.title}</h2><p>{row.summary}</p></div><dl><div><dt>Priority</dt><dd>{Math.round(row.priority_score)}</dd></div><div><dt>Decision</dt><dd><Clock3/>{row.decision_deadline?new Date(row.decision_deadline).toLocaleString():"Not set"}</dd></div><div><dt>Recovery</dt><dd>{row.recovery_state.replaceAll("_"," ")}</dd></div></dl><ArrowRight/></Link>)}</section>}</main></ProductShell>}

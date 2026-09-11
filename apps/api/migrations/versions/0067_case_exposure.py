@@ -1,0 +1,8 @@
+"""Case exposure. Revision ID: 0067_case_exposure"""
+from alembic import op
+import sqlalchemy as sa
+revision="0067_case_exposure"; down_revision="0066_operational_case_vnext"; branch_labels=None; depends_on=None
+def upgrade():
+ if "platform_business_exposures" in set(sa.inspect(op.get_bind()).get_table_names()): return
+ op.create_table("platform_business_exposures",sa.Column("id",sa.String(64),primary_key=True),sa.Column("public_id",sa.String(36),nullable=False,unique=True),sa.Column("business_number",sa.String(80)),sa.Column("tenant_id",sa.String(64),nullable=False),sa.Column("plant_id",sa.String(64)),sa.Column("version",sa.Integer(),nullable=False,server_default="1"),sa.Column("created_at",sa.DateTime(timezone=True),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),nullable=False),sa.Column("case_id",sa.String(64),sa.ForeignKey("platform_operational_cases.id",ondelete="CASCADE"),nullable=False),sa.Column("metric",sa.String(80),nullable=False),sa.Column("baseline",sa.Numeric(20,6)),sa.Column("projected",sa.Numeric(20,6)),sa.Column("delta",sa.Numeric(20,6)),sa.Column("unit",sa.String(32),nullable=False),sa.Column("currency",sa.String(3)),sa.Column("time_horizon_start",sa.DateTime(timezone=True)),sa.Column("time_horizon_end",sa.DateTime(timezone=True)),sa.Column("methodology",sa.Text(),nullable=False),sa.Column("confidence",sa.Float(),nullable=False),sa.Column("attribution_state",sa.String(32),nullable=False),sa.Column("calculation_version",sa.String(80),nullable=False),sa.Column("input_snapshot_id",sa.String(64)),sa.Column("computed_at",sa.DateTime(timezone=True),nullable=False))
+def downgrade(): op.drop_table("platform_business_exposures")

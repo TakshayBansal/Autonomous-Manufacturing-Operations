@@ -1,0 +1,8 @@
+"""Conservative value attribution. Revision ID: 0071_value_attribution"""
+from alembic import op
+import sqlalchemy as sa
+revision="0071_value_attribution"; down_revision="0070_recovery_verification"; branch_labels=None; depends_on=None
+def upgrade():
+ if "platform_value_attributions" in set(sa.inspect(op.get_bind()).get_table_names()): return
+ op.create_table("platform_value_attributions",sa.Column("id",sa.String(64),primary_key=True),sa.Column("public_id",sa.String(36),nullable=False,unique=True),sa.Column("business_number",sa.String(80)),sa.Column("tenant_id",sa.String(64),nullable=False),sa.Column("plant_id",sa.String(64)),sa.Column("version",sa.Integer(),nullable=False,server_default="1"),sa.Column("created_at",sa.DateTime(timezone=True),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),nullable=False),sa.Column("case_id",sa.String(64),sa.ForeignKey("platform_operational_cases.id",ondelete="CASCADE"),nullable=False),sa.Column("action_intent_id",sa.String(64),sa.ForeignKey("platform_action_intents.id")),sa.Column("metric",sa.String(80),nullable=False),sa.Column("baseline",sa.Numeric(20,6)),sa.Column("counterfactual",sa.Numeric(20,6)),sa.Column("actual",sa.Numeric(20,6)),sa.Column("attributed_value",sa.Numeric(20,6)),sa.Column("unit",sa.String(32),nullable=False),sa.Column("currency",sa.String(3)),sa.Column("methodology",sa.Text(),nullable=False),sa.Column("confidence_level",sa.String(32),nullable=False),sa.Column("assumptions",sa.JSON(),nullable=False),sa.Column("verified_at",sa.DateTime(timezone=True)))
+def downgrade(): op.drop_table("platform_value_attributions")
